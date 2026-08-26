@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Centre de Santé — Portail</title>
+{% load static %}
+<link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">+</span>
+      <span>Centre de Santé</span>
+    </div>
+    <div id="user-info" class="user-info hidden">
+      <span id="user-label"></span>
+      <button id="btn-logout" class="btn-ghost">Déconnexion</button>
+    </div>
+  </header>
+
+  <main id="app">
+
+    <!-- ===================== AUTH ===================== -->
+    <section id="view-auth" class="view">
+      <div class="auth-card">
+        <div class="tabs">
+          <button class="tab active" data-tab="login">Se connecter</button>
+          <button class="tab" data-tab="register">Créer un compte patient</button>
+        </div>
+
+        <form id="form-login" class="form">
+          <label>Email
+            <input type="email" id="login-email" required>
+          </label>
+          <label>Mot de passe
+            <input type="password" id="login-password" required>
+          </label>
+          <p class="error" id="login-error"></p>
+          <button type="submit" class="btn-primary">Se connecter</button>
+        </form>
+
+        <form id="form-register" class="form hidden">
+          <div class="grid-2">
+            <label>Prénom
+              <input type="text" id="reg-prenom" required>
+            </label>
+            <label>Nom
+              <input type="text" id="reg-nom" required>
+            </label>
+          </div>
+          <label>Email
+            <input type="email" id="reg-email" required>
+          </label>
+          <label>Mot de passe
+            <input type="password" id="reg-password" required minlength="6">
+          </label>
+          <label>Date de naissance
+            <input type="date" id="reg-naissance">
+          </label>
+          <p class="error" id="register-error"></p>
+          <button type="submit" class="btn-primary">Créer mon compte</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===================== PATIENT ===================== -->
+    <section id="view-patient" class="view hidden">
+      <div class="grid-main">
+        <div class="card">
+          <h2>Prendre un rendez-vous</h2>
+          <label>Médecin
+            <select id="rdv-medecin"></select>
+          </label>
+          <label>Date
+            <input type="date" id="rdv-date">
+          </label>
+          <button id="btn-charger-creneaux" class="btn-secondary">Voir les créneaux</button>
+          <div id="creneaux-libres" class="chips"></div>
+          <p class="hint" id="rdv-message"></p>
+        </div>
+
+        <div class="card">
+          <h2>Mes rendez-vous</h2>
+          <div id="liste-mes-rdv" class="list"></div>
+        </div>
+
+        <div class="card">
+          <h2>Mes prescriptions</h2>
+          <div id="liste-mes-prescriptions" class="list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== RECEPTIONNISTE ===================== -->
+    <section id="view-staff" class="view hidden">
+      <div class="grid-main">
+        <div class="card wide">
+          <h2>Demandes de rendez-vous</h2>
+          <div class="filter-row">
+            <button class="chip-filter active" data-statut="EN_ATTENTE">En attente</button>
+            <button class="chip-filter" data-statut="CONFIRME">Confirmés</button>
+            <button class="chip-filter" data-statut="">Tous</button>
+          </div>
+          <div id="liste-rdv-staff" class="list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== MEDECIN ===================== -->
+    <section id="view-medecin" class="view hidden">
+      <div class="grid-main">
+        <div class="card wide">
+          <h2>Mes rendez-vous</h2>
+          <div class="filter-row">
+            <button class="chip-filter-medecin active" data-statut="CONFIRME">À honorer</button>
+            <button class="chip-filter-medecin" data-statut="EN_ATTENTE">En attente</button>
+            <button class="chip-filter-medecin" data-statut="TERMINE">Terminés</button>
+            <button class="chip-filter-medecin" data-statut="">Tous</button>
+          </div>
+          <div id="liste-rdv-medecin" class="list"></div>
+        </div>
+
+        <div class="card wide hidden" id="carte-consultation">
+          <h2>Enregistrer une consultation — RDV #<span id="consultation-rdv-id"></span></h2>
+          <label>Compte-rendu
+            <textarea id="consultation-compte-rendu" rows="3" placeholder="Observations, diagnostic, recommandations..."></textarea>
+          </label>
+          <div class="actions" style="margin-top:8px;">
+            <button id="btn-valider-consultation" class="btn-primary" style="width:auto;">Valider la consultation</button>
+            <button id="btn-annuler-consultation" class="btn-secondary">Annuler</button>
+          </div>
+          <p class="hint" id="consultation-message"></p>
+        </div>
+
+        <div class="card wide hidden" id="carte-prescription">
+          <h2>Rédiger une prescription</h2>
+          <div id="lignes-prescription"></div>
+          <button id="btn-ajouter-ligne" class="btn-secondary">+ Ajouter un médicament</button>
+          <div class="actions" style="margin-top:8px;">
+            <button id="btn-valider-prescription" class="btn-primary" style="width:auto;">Enregistrer la prescription</button>
+            <button id="btn-ignorer-prescription" class="btn-secondary">Pas de prescription</button>
+          </div>
+          <p class="hint" id="prescription-message"></p>
+        </div>
+
+        <div class="card">
+          <h2>Déclarer une disponibilité</h2>
+          <label>Jour
+            <select id="dispo-jour">
+              <option value="0">Lundi</option>
+              <option value="1">Mardi</option>
+              <option value="2">Mercredi</option>
+              <option value="3">Jeudi</option>
+              <option value="4">Vendredi</option>
+              <option value="5">Samedi</option>
+              <option value="6">Dimanche</option>
+            </select>
+          </label>
+          <div class="grid-2">
+            <label>Heure début
+              <input type="time" id="dispo-debut" value="08:00">
+            </label>
+            <label>Heure fin
+              <input type="time" id="dispo-fin" value="12:00">
+            </label>
+          </div>
+          <label>Durée créneau (minutes)
+            <input type="number" id="dispo-duree" value="30" min="5" step="5">
+          </label>
+          <button id="btn-ajouter-dispo" class="btn-secondary">Ajouter cette disponibilité</button>
+          <p class="hint" id="dispo-message"></p>
+        </div>
+
+        <div class="card">
+          <h2>Mes disponibilités actuelles</h2>
+          <div id="liste-dispos" class="list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== ADMINISTRATEUR ===================== -->
+    <section id="view-admin" class="view hidden">
+      <div class="grid-main">
+
+        <div class="card wide">
+          <h2>Tableau de bord</h2>
+          <div id="dashboard-cartes" class="dashboard-grid"></div>
+          <div id="dashboard-occupation" style="margin-top:16px;"></div>
+          <p class="hint" id="dashboard-alertes"></p>
+        </div>
+
+        <div class="card wide">
+          <h2>Comptes utilisateurs</h2>
+          <div class="filter-row">
+            <select id="admin-filtre-role">
+              <option value="">Tous les rôles</option>
+              <option value="PATIENT">Patient</option>
+              <option value="MEDECIN">Médecin</option>
+              <option value="RECEPTIONNISTE">Réceptionniste</option>
+              <option value="ADMINISTRATEUR">Administrateur</option>
+            </select>
+            <select id="admin-filtre-actif">
+              <option value="">Actif et inactif</option>
+              <option value="true">Actifs seulement</option>
+              <option value="false">Inactifs seulement</option>
+            </select>
+            <button id="btn-ouvrir-creation-compte" class="btn-secondary">+ Créer un compte</button>
+          </div>
+          <div id="liste-utilisateurs" class="list"></div>
+        </div>
+
+        <div class="card wide hidden" id="carte-creation-compte">
+          <h2>Créer un compte</h2>
+          <div class="grid-2">
+            <label>Prénom<input type="text" id="nc-prenom"></label>
+            <label>Nom<input type="text" id="nc-nom"></label>
+          </div>
+          <label>Email<input type="email" id="nc-email"></label>
+          <label>Mot de passe initial<input type="password" id="nc-motdepasse"></label>
+          <label>Rôle
+            <select id="nc-role">
+              <option value="PATIENT">Patient</option>
+              <option value="MEDECIN">Médecin</option>
+              <option value="RECEPTIONNISTE">Réceptionniste</option>
+              <option value="ADMINISTRATEUR">Administrateur</option>
+            </select>
+          </label>
+          <label id="nc-specialite-wrap" class="hidden">Spécialité (si médecin)<input type="text" id="nc-specialite"></label>
+          <div class="actions" style="margin-top:8px;">
+            <button id="btn-valider-creation-compte" class="btn-primary" style="width:auto;">Créer</button>
+            <button id="btn-annuler-creation-compte" class="btn-secondary">Annuler</button>
+          </div>
+          <p class="hint" id="creation-compte-message"></p>
+        </div>
+
+        <div class="card wide">
+          <h2>Rendez-vous — supervision transverse</h2>
+          <div class="filter-row">
+            <button class="chip-filter-admin-rdv active" data-statut="">Tous</button>
+            <button class="chip-filter-admin-rdv" data-statut="EN_ATTENTE">En attente</button>
+            <button class="chip-filter-admin-rdv" data-statut="CONFIRME">Confirmés</button>
+            <button class="chip-filter-admin-rdv" data-statut="ANNULE">Annulés</button>
+            <button class="chip-filter-admin-rdv" data-statut="TERMINE">Terminés</button>
+          </div>
+          <div id="liste-rdv-admin" class="list"></div>
+        </div>
+
+        <div class="card wide">
+          <h2>Rechercher un patient (historique complet)</h2>
+          <label>Nom, prénom ou email
+            <input type="text" id="admin-recherche-patient" placeholder="Rechercher...">
+          </label>
+          <div id="resultats-recherche-patient" class="list"></div>
+          <div id="dossier-patient" style="margin-top:16px;"></div>
+        </div>
+
+        <div class="card">
+          <h2>Référentiel des médicaments</h2>
+          <div class="grid-2">
+            <input type="text" id="admin-med-nom" placeholder="Nom du médicament">
+            <button id="btn-ajouter-medicament" class="btn-secondary">Ajouter</button>
+          </div>
+          <div id="liste-medicaments-admin" class="list" style="margin-top:10px;"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <script src="{% static 'app.js' %}"></script>
+</body>
+</html>

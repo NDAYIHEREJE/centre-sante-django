@@ -1,0 +1,8 @@
+*.pyc
+__pycache__/
+centre_sante.db
+staticfiles/
+.env
+venv/
+.vscode/
+.idea/
