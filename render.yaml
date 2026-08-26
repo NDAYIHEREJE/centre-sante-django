@@ -3,7 +3,10 @@ services:
     name: centre-sante-django
     runtime: python
     plan: free
-    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
+    # "|| true" après seed/createsuperuser : ces commandes échoueraient sur les
+    # déploiements SUIVANTS (le compte existe déjà) — on ignore cette erreur pour
+    # ne pas bloquer le build à chaque nouveau déploiement.
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate && python manage.py seed && (python manage.py createsuperuser --noinput || true)"
     startCommand: "gunicorn centre_sante.wsgi:application"
     envVars:
       - key: DJANGO_DEBUG
@@ -18,6 +21,18 @@ services:
           property: connectionString
       - key: PYTHON_VERSION
         value: "3.11.9"
+      # Identifiants du compte administrateur créé automatiquement au premier déploiement.
+      # sync: false => Render vous demandera de saisir ces valeurs vous-même dans son
+      # tableau de bord (onglet Environment), plutôt que de les écrire en clair dans ce
+      # fichier versionné sur GitHub — c'est la pratique attendue pour un secret.
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false
+      - key: DJANGO_SUPERUSER_NOM
+        sync: false
+      - key: DJANGO_SUPERUSER_PRENOM
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
 
 databases:
   - name: centre-sante-db
