@@ -2,14 +2,19 @@
 Configuration du projet Django — Gestion d'un centre de santé / clinique.
 """
 import os
+import dj_database_url
 from pathlib import Path
 from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "changez-moi-en-production-cle-aleatoire")
-DEBUG = True
-ALLOWED_HOSTS = ["*"]
+
+# En local (par défaut) : DEBUG=True, tous les hôtes autorisés.
+# En production (Render) : ces deux variables sont définies dans le tableau de bord Render
+# (voir README_DEPLOIEMENT.md), ce qui bascule automatiquement vers un mode sécurisé.
+DEBUG = os.getenv("DJANGO_DEBUG", "True") == "True"
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -29,6 +34,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # sert les fichiers statiques en production
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -58,25 +64,17 @@ TEMPLATES = [
 WSGI_APPLICATION = "centre_sante.wsgi.application"
 
 # ---------------------------------------------------------
-# Base de données — SQLite par défaut (démo), PostgreSQL en production
-# via la variable d'environnement DATABASE_URL (voir README.md)
+# Base de données — SQLite par défaut (démo locale), PostgreSQL en production.
+# Render (et la plupart des hébergeurs) fournissent une variable DATABASE_URL
+# automatiquement dès qu'une base PostgreSQL est reliée au service : si elle est
+# présente, elle est utilisée ; sinon, on retombe sur SQLite pour le développement local.
 # ---------------------------------------------------------
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "centre_sante.db",
-    }
+    "default": dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'centre_sante.db'}",
+        conn_max_age=600,
+    )
 }
-
-# Exemple de configuration PostgreSQL (à activer en décommentant, cf README) :
-# DATABASES["default"] = {
-#     "ENGINE": "django.db.backends.postgresql",
-#     "NAME": os.getenv("DB_NAME", "centre_sante"),
-#     "USER": os.getenv("DB_USER", "postgres"),
-#     "PASSWORD": os.getenv("DB_PASSWORD", ""),
-#     "HOST": os.getenv("DB_HOST", "localhost"),
-#     "PORT": os.getenv("DB_PORT", "5432"),
-# }
 
 AUTH_USER_MODEL = "sante.Utilisateur"
 
@@ -90,6 +88,10 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"  # utilisé par collectstatic en production (Render)
+STORAGES = {
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ---------------------------------------------------------
@@ -112,6 +114,17 @@ SIMPLE_JWT = {
 }
 
 # ---------------------------------------------------------
-# CORS — accès depuis le frontend statique (http://localhost:5500)
+# CORS — inutile en pratique puisque le frontend est servi par ce même serveur
+# Django (fusion frontend/backend), mais laissé permissif pour ne rien bloquer
+# si l'API est un jour appelée depuis une autre origine.
 # ---------------------------------------------------------
 CORS_ALLOW_ALL_ORIGINS = True
+
+# ---------------------------------------------------------
+# Sécurité HTTPS — activée uniquement quand DJANGO_DEBUG=False (production Render),
+# jamais en développement local (sinon http://localhost ne fonctionnerait plus).
+# ---------------------------------------------------------
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
